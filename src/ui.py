@@ -111,7 +111,6 @@ async def lifespan(app: FastAPI):
                 "tls": True,
                 "tlsAllowInvalidCertificates": True,
                 "tlsAllowInvalidHostnames": True,
-                "tlsInsecure": True,  # More permissive SSL
                 "serverSelectionTimeoutMS": 30000,  # Increased timeout
                 "connectTimeoutMS": 30000,  # Increased timeout
                 "socketTimeoutMS": 30000,  # Increased timeout
