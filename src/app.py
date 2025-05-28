@@ -20,6 +20,7 @@ from src.models.VectorStoreModel import VectorStoreModel
 from src.modules.llm.LLMProviderFactory import LLMProviderFactory
 from src.helpers.config import get_settings
 from src.routes.chat import answer
+import certifi
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -52,7 +53,7 @@ async def initialize_app():
     settings = get_settings()
 
     try:
-        mongo_conn = AsyncIOMotorClient(settings.MONGODB_URL)
+        mongo_conn = AsyncIOMotorClient(settings.MONGODB_URL, tlsCAFile=certifi.where())
         mongo_client = mongo_conn[settings.MONGODB_DATABASE]
         qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
         vector_store = await VectorStoreModel.create_instance(qdrant_client)
