@@ -10,7 +10,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Constants
-API_BASE_URL = "http://localhost:8010/api/v1"  # Update this if your FastAPI server runs on a different port
+API_BASE_URL = "http://localhost:8070/api/v1"  # Update this if your FastAPI server runs on a different port
 DATA_DIR = Path("data")
 
 # LLM Provider configurations
