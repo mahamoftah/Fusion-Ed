@@ -5,4 +5,6 @@ __pycache__/
 docker
 data
 data/*
-
+.devcontainer/devcontainer.json
+.devcontainer
+.devcontainer/*
