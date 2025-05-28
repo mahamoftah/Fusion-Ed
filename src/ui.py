@@ -182,7 +182,7 @@ def is_port_in_use(port: int, host: str = '127.0.0.1') -> bool:
         except OSError:
             return True
 
-def find_available_port(start_port: int = 8010, max_attempts: int = 10) -> int:
+def find_available_port(start_port: int = 8070, max_attempts: int = 10) -> int:
     """Find an available port starting from start_port."""
     port = start_port
     for _ in range(max_attempts):
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     try:
         # Try to find an available port
         port = find_available_port()
-        if port != 8000:
+        if port != 8070:
             logger.warning(f"Port 8010 is in use, using port {port} instead")
             API_BASE_URL = f"http://localhost:{port}/api/v1"
         
