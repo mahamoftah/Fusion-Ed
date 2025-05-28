@@ -102,29 +102,55 @@ async def lifespan(app: FastAPI):
     app.qdrant_client = None
     
     try:
-        # Initialize MongoDB connection with proper SSL configuration
+        # Initialize MongoDB connection with more permissive SSL configuration
         try:
+            # Set environment variables for SSL
+            os.environ['PYTHONHTTPSVERIFY'] = '0'
+            
             mongo_client_options = {
                 "tls": True,
                 "tlsAllowInvalidCertificates": True,
                 "tlsAllowInvalidHostnames": True,
-                "serverSelectionTimeoutMS": 5000,
-                "connectTimeoutMS": 10000,
+                "tlsInsecure": True,  # More permissive SSL
+                "serverSelectionTimeoutMS": 30000,  # Increased timeout
+                "connectTimeoutMS": 30000,  # Increased timeout
+                "socketTimeoutMS": 30000,  # Increased timeout
                 "retryWrites": True,
-                "w": "majority"
+                "w": "majority",
+                "ssl_cert_reqs": "CERT_NONE",  # Disable certificate verification
+                "ssl": True,
+                "ssl_ca_certs": None  # Don't use CA certificates
             }
+            
+            # Log the MongoDB URL (without password) for debugging
+            safe_url = settings.MONGODB_URL.replace(settings.MONGODB_URL.split('@')[0], '***')
+            logger.info(f"Attempting to connect to MongoDB at: {safe_url}")
             
             app.mongo_conn = AsyncIOMotorClient(
                 settings.MONGODB_URL,
                 **mongo_client_options
             )
             
-            # Test the connection
-            await app.mongo_conn.admin.command('ping')
+            # Test the connection with retries
+            max_retries = 3
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    await app.mongo_conn.admin.command('ping')
+                    break
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count == max_retries:
+                        raise
+                    logger.warning(f"MongoDB connection attempt {retry_count} failed: {str(e)}")
+                    await asyncio.sleep(2)  # Wait before retrying
+            
             app.mongo_client = app.mongo_conn[settings.MONGODB_DATABASE]
-            logger.info("MongoDB connection established")
+            logger.info("MongoDB connection established successfully")
+            
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
+            logger.error("Please check your MongoDB connection string and network settings")
             raise
         
         # Initialize Qdrant client
