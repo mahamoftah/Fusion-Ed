@@ -117,9 +117,11 @@ async def lifespan(app: FastAPI):
                 "socketTimeoutMS": 30000,  # Increased timeout
                 "retryWrites": True,
                 "w": "majority",
-                "ssl_cert_reqs": "CERT_NONE",  # Disable certificate verification
-                "ssl": True,
-                "ssl_ca_certs": None  # Don't use CA certificates
+                "directConnection": False,  # Use replica set connection
+                "maxPoolSize": 50,  # Increase connection pool size
+                "minPoolSize": 10,  # Minimum connections to maintain
+                "maxIdleTimeMS": 30000,  # Maximum time a connection can remain idle
+                "waitQueueTimeoutMS": 30000  # How long to wait for a connection from the pool
             }
             
             # Log the MongoDB URL (without password) for debugging
