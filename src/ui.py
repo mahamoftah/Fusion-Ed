@@ -32,8 +32,65 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants
-API_BASE_URL = "http://localhost:8000/api/v1"
 DATA_DIR = Path("data")
+
+def get_api_url(port: int) -> str:
+    """Get the API URL for the given port."""
+    return f"http://localhost:{port}/api/v1"
+
+def send_message(message: str, port: int) -> str:
+    """Send a message to the chat endpoint and get the response."""
+    try:
+        api_url = get_api_url(port)
+        # Create the chat request payload according to the schema
+        chat_request = {
+            "user_id": st.session_state.user_id,
+            "chat_id": "",  # Empty string as requested
+            "question": message
+        }
+        
+        response = requests.post(
+            f"{api_url}/chat/answer",
+            json=chat_request
+        )
+        
+        if response.status_code == 200:
+            return response.json()["answer"]
+        else:
+            return f"Error: {response.text}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def run_streamlit(port: int):
+    """Run the Streamlit UI."""
+    st.set_page_config(page_title="Fusion-Ed Chat Interface", layout="wide")
+    st.title("Chat with Fusion-Ed")
+    
+    initialize_session_state()
+    
+    # Sidebar for LLM configuration
+    st.sidebar.header("LLM Configuration")
+    st.sidebar.write("Coming Soon!")
+    
+    # Display chat history
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("What would you like to know?"):
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        # Get and display assistant response
+        with st.chat_message("assistant"):
+            response = send_message(prompt, port)
+            st.write(response)
+            st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,9 +102,25 @@ async def lifespan(app: FastAPI):
     app.qdrant_client = None
     
     try:
-        # Initialize MongoDB connection
+        # Initialize MongoDB connection with proper SSL configuration
         try:
-            app.mongo_conn = AsyncIOMotorClient(settings.MONGODB_URL)
+            mongo_client_options = {
+                "tls": True,
+                "tlsAllowInvalidCertificates": True,
+                "tlsAllowInvalidHostnames": True,
+                "serverSelectionTimeoutMS": 5000,
+                "connectTimeoutMS": 10000,
+                "retryWrites": True,
+                "w": "majority"
+            }
+            
+            app.mongo_conn = AsyncIOMotorClient(
+                settings.MONGODB_URL,
+                **mongo_client_options
+            )
+            
+            # Test the connection
+            await app.mongo_conn.admin.command('ping')
             app.mongo_client = app.mongo_conn[settings.MONGODB_DATABASE]
             logger.info("MongoDB connection established")
         except Exception as e:
@@ -120,59 +193,6 @@ def initialize_session_state():
     if "server_started" not in st.session_state:
         st.session_state.server_started = False
 
-def send_message(message: str) -> str:
-    """Send a message to the chat endpoint and get the response."""
-    try:
-        # Create the chat request payload according to the schema
-        chat_request = {
-            "user_id": st.session_state.user_id,
-            "chat_id": "",  # Empty string as requested
-            "question": message
-        }
-        
-        response = requests.post(
-            f"{API_BASE_URL}/chat/answer",
-            json=chat_request
-        )
-        
-        if response.status_code == 200:
-            return response.json()["answer"]
-        else:
-            return f"Error: {response.text}"
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-def run_streamlit():
-    """Run the Streamlit UI."""
-    st.set_page_config(page_title="Fusion-Ed Chat Interface", layout="wide")
-    st.title("Chat with Fusion-Ed")
-    
-    initialize_session_state()
-    
-    # Sidebar for LLM configuration
-    st.sidebar.header("LLM Configuration")
-    st.sidebar.write("Coming Soon!")
-    
-    # Display chat history
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-    
-    # Chat input
-    if prompt := st.chat_input("What would you like to know?"):
-        # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        
-        # Display user message
-        with st.chat_message("user"):
-            st.write(prompt)
-        
-        # Get and display assistant response
-        with st.chat_message("assistant"):
-            response = send_message(prompt)
-            st.write(response)
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
-
 def is_port_in_use(port: int, host: str = '127.0.0.1') -> bool:
     """Check if a port is in use."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -197,7 +217,8 @@ if __name__ == "__main__":
         port = find_available_port()
         if port != 8000:
             logger.warning(f"Port 8000 is in use, using port {port} instead")
-            API_BASE_URL = f"http://localhost:{port}/api/v1"
+        
+        logger.info(f"Starting API server on port {port}")
         
         # Start the FastAPI server in a separate thread
         server_thread = threading.Thread(
@@ -209,8 +230,8 @@ if __name__ == "__main__":
         # Give the server time to start
         time.sleep(2)
         
-        # Run the Streamlit UI
-        run_streamlit()
+        # Run the Streamlit UI with the correct port
+        run_streamlit(port)
     except Exception as e:
         logger.error(f"Failed to start application: {str(e)}")
         sys.exit(1)
