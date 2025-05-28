@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
-from controllers.BaseController import BaseController
-from modules.rag.embedding import Embedding
-from modules.rag.splitting import RecursiveSplitter
+from src.controllers.BaseController import BaseController
+from src.modules.rag.embedding import Embedding
+from src.modules.rag.splitting import RecursiveSplitter
 
 
 class RagController(BaseController):

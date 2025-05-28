@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
-from controllers.DataExtractionController import DataExtractionController
-from controllers.RagController import RagController
-from routes.schemas.base import HealthCheckResponse
-from helpers.config import Settings, get_settings
-from routes.schemas.file import FileRequest, FileResponse
+from src.controllers.DataExtractionController import DataExtractionController
+from src.controllers.RagController import RagController
+from src.routes.schemas.base import HealthCheckResponse
+from src.helpers.config import Settings, get_settings
+from src.routes.schemas.file import FileRequest, FileResponse
 import logging
 import os
 

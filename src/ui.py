@@ -1,19 +1,20 @@
+import os
+import sys
 import streamlit as st
 import requests
 import json
 from typing import List, Dict
-import os
 import uuid
 from pathlib import Path
-import sys
-# Add the parent directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add the project root directory to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 
 # Constants
-API_BASE_URL = "http://localhost:8070/api/v1"  # Update this if your FastAPI server runs on a different port
+API_BASE_URL = "http://localhost:8010/api/v1"  # Update this if your FastAPI server runs on a different port
 DATA_DIR = Path("data")
 
-# LLM Provider configurations
 def ensure_data_dir():
     """Ensure the data directory exists."""
     DATA_DIR.mkdir(exist_ok=True)
@@ -32,43 +33,8 @@ def initialize_session_state():
     if "user_id" not in st.session_state:
         # Generate a unique user ID for this session
         st.session_state.user_id = str(uuid.uuid4())
-    if "current_llm" not in st.session_state:
-        st.session_state.current_llm = "OpenAI"
-
-# def upload_file(file):
-#     """Upload a file to the backend."""
-#     try:
-#         ensure_data_dir()
-        
-#         # Save file to data directory
-#         file_path = DATA_DIR / file.name
-#         with open(file_path, "wb") as f:
-#             f.write(file.getvalue())
-        
-#         # Create the file request payload according to the schema
-#         file_request = {
-#             "files": [{
-#                 "file_id": str(uuid.uuid4()),
-#                 "file_url": str(file_path),  # Send the file path
-#                 "file_name": file.name,
-#                 "course_id": "default"
-#             }]
-#         }
-        
-#         # Send the request with file metadata
-#         response = requests.post(
-#             f"{API_BASE_URL}/files/upload",
-#             json=file_request
-#         )
-        
-#         if response.status_code == 200:
-#             st.success(f"Successfully uploaded {file.name}")
-#             st.session_state.uploaded_files.append(file.name)
-#         else:
-#             st.error(f"Error uploading {file.name}: {response.text}")
-#     except Exception as e:
-#         st.error(f"Error uploading file: {str(e)}")
-
+    if "chat_id" not in st.session_state:
+        st.session_state.chat_id = ""
 
 def send_message(message: str) -> str:
     """Send a message to the chat endpoint and get the response."""
@@ -76,7 +42,7 @@ def send_message(message: str) -> str:
         # Create the chat request payload according to the schema
         chat_request = {
             "user_id": st.session_state.user_id,
-            "chat_id": "",  # Empty string as requested
+            "chat_id": st.session_state.chat_id,
             "question": message
         }
         
@@ -102,7 +68,6 @@ def main():
     st.sidebar.header("LLM Configuration")
     st.sidebar.write(f"Coming Soon...")
     
-    
     # Display chat history
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
@@ -124,4 +89,4 @@ def main():
             st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
-    main() 
+    main()

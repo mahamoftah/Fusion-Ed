@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from routes.schemas.base import HealthCheckResponse
-from helpers.config import Settings, get_settings
+from src.routes.schemas.base import HealthCheckResponse
+from src.helpers.config import Settings, get_settings
 import logging
 
 logger = logging.getLogger(__name__)

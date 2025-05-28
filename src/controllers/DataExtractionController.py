@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from pptx import Presentation
 from langchain_community.document_loaders import PyMuPDFLoader
 import requests
-from controllers.BaseController import BaseController
+from src.controllers.BaseController import BaseController
 
 
 

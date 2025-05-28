@@ -1,14 +1,14 @@
 from fastapi import FastAPI
-from models.ChatHistoryModel import ChatHistoryModel
-from models.VectorStoreModel import VectorStoreModel
-from modules.llm.LLMProviderFactory import LLMProviderFactory
-from routes.base import base_router
-from routes.file import file_router
-from routes.chat import chat_router
+from src.models.ChatHistoryModel import ChatHistoryModel
+from src.models.VectorStoreModel import VectorStoreModel
+from src.modules.llm.LLMProviderFactory import LLMProviderFactory
+from src.routes.base import base_router
+from src.routes.file import file_router
+from src.routes.chat import chat_router
 from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
 from qdrant_client import AsyncQdrantClient
-from helpers.config import get_settings
+from src.helpers.config import get_settings
 import logging
 import sys
 import os

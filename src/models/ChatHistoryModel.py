@@ -1,9 +1,9 @@
-from models.BaseDataModel import BaseDataModel
-from models.schemas.ChatHistorySchema import ChatHistorySchema
+from src.models.BaseDataModel import BaseDataModel
+from src.models.schemas.ChatHistorySchema import ChatHistorySchema
 import logging
 from pymongo.errors import PyMongoError
 from typing import List
-from models.enums.ChatHistoryEnum import ChatHistoryEnum
+from src.models.enums.ChatHistoryEnum import ChatHistoryEnum
 
 class ChatHistoryModel(BaseDataModel):
 
