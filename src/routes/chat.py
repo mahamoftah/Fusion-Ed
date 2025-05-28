@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Request
-from controllers.ChatController import ChatController
-from controllers.DataExtractionController import DataExtractionController
-from controllers.RagController import RagController
-from helpers.config import Settings, get_settings
-from routes.schemas.chat import ChatHistory, ChatHistoryRequest, ChatHistoryResponse, ChatRequest, ChatResponse
-from modules.llm.LLMProviderFactory import LLMProviderFactory
+from src.controllers.ChatController import ChatController
+from src.controllers.DataExtractionController import DataExtractionController
+from src.controllers.RagController import RagController
+from src.helpers.config import Settings, get_settings
+from src.routes.schemas.chat import ChatHistory, ChatHistoryRequest, ChatHistoryResponse, ChatRequest, ChatResponse
+from src.modules.llm.LLMProviderFactory import LLMProviderFactory
 import logging
 
 logger = logging.getLogger(__name__)

@@ -5,35 +5,15 @@ from typing import List, Dict
 import os
 import uuid
 from pathlib import Path
+import sys
+# Add the parent directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Constants
 API_BASE_URL = "http://localhost:8010/api/v1"  # Update this if your FastAPI server runs on a different port
 DATA_DIR = Path("data")
 
 # LLM Provider configurations
-LLM_PROVIDERS = {
-    "OpenAI": {
-        "model_id": "gpt-3.5-turbo",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    },
-    "Google": {
-        "model_id": "gemini-pro",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    },
-    "Groq": {
-        "model_id": "mixtral-8x7b-32768",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    },
-    "DeepSeek": {
-        "model_id": "deepseek-chat",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    }
-}
-
 def ensure_data_dir():
     """Ensure the data directory exists."""
     DATA_DIR.mkdir(exist_ok=True)
@@ -89,32 +69,6 @@ def initialize_session_state():
 #     except Exception as e:
 #         st.error(f"Error uploading file: {str(e)}")
 
-def update_llm_config():
-    """Update LLM configuration in the backend."""
-    try:
-        provider = st.session_state.current_llm
-        config = LLM_PROVIDERS[provider]
-        
-        # Create the configuration update request
-        config_request = {
-            "provider": provider.upper(),
-            "model_id": config["model_id"],
-            "max_tokens": config["max_tokens"],
-            "temperature": config["temperature"]
-        }
-        
-        # Send the request to update LLM configuration
-        response = requests.post(
-            f"{API_BASE_URL}/llm/update",
-            json=config_request
-        )
-        
-        if response.status_code == 200:
-            st.success(f"Successfully switched to {provider}")
-        else:
-            st.error(f"Error updating LLM configuration: {response.text}")
-    except Exception as e:
-        st.error(f"Error updating LLM configuration: {str(e)}")
 
 def send_message(message: str) -> str:
     """Send a message to the chat endpoint and get the response."""
@@ -148,20 +102,6 @@ def main():
     st.sidebar.header("LLM Configuration")
     st.sidebar.write(f"Coming Soon...")
     
-    # LLM Provider selection
-    selected_provider = st.sidebar.selectbox(
-        "Select LLM Provider",
-        options=list(LLM_PROVIDERS.keys()),
-        key="current_llm",
-        on_change=update_llm_config
-    )
-    
-    # Display current LLM configuration
-    st.sidebar.subheader("Current Configuration")
-    config = LLM_PROVIDERS[selected_provider]
-    st.sidebar.write(f"Model: {config['model_id']}")
-    st.sidebar.write(f"Max Tokens: {config['max_tokens']}")
-    st.sidebar.write(f"Temperature: {config['temperature']}")
     
     # Display chat history
     for message in st.session_state.chat_history:
