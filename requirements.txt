@@ -20,4 +20,3 @@ langchain-qdrant==0.2.0
 langchain-google-genai==2.1.4
 nest-asyncio==1.6.0
 certifi==2025.4.26
-streamlit==1.17.0
