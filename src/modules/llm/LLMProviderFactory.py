@@ -3,9 +3,9 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
-from src.modules.BaseModule import BaseModule
-from src.modules.llm.LLMEnums import *
-from src.modules.llm.providers.BaseProvider import BaseProvider
+from modules.BaseModule import BaseModule
+from modules.llm.LLMEnums import *
+from modules.llm.providers.BaseProvider import BaseProvider
 
 
 class LLMProviderFactory(BaseModule):

@@ -1,7 +1,7 @@
 from typing import List
-from src.controllers.BaseController import BaseController
-from src.models.schemas.ChatHistorySchema import ChatHistorySchema, Metadata
-from src.modules.rag.embedding import Embedding
+from controllers.BaseController import BaseController
+from models.schemas.ChatHistorySchema import ChatHistorySchema, Metadata
+from modules.rag.embedding import Embedding
 import uuid
 from datetime import datetime
 import os

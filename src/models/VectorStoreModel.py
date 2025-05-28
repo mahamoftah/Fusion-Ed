@@ -1,13 +1,13 @@
 from datetime import datetime
 import uuid
-from src.models.BaseDataModel import BaseDataModel
-from src.models.schemas.VectorStoreSchema import VectorStoreMetadata, VectorStoreSchema
+from models.BaseDataModel import BaseDataModel
+from models.schemas.VectorStoreSchema import VectorStoreMetadata, VectorStoreSchema
 import logging
 from typing import Any, Dict, List, Optional
 from qdrant_client.http.models import PointStruct, VectorParams, Distance
 from qdrant_client.http.exceptions import UnexpectedResponse
 import numpy as np
-from src.models.enums.VectorStoreEnum import VectorStoreEnum
+from models.enums.VectorStoreEnum import VectorStoreEnum
 
 
 class VectorStoreModel(BaseDataModel):

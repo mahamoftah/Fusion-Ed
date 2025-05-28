@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends
-from src.routes.schemas.base import HealthCheckResponse
-from src.helpers.config import Settings, get_settings
+from routes.schemas.base import HealthCheckResponse
+from helpers.config import Settings, get_settings
 import logging
 
 logger = logging.getLogger(__name__)
-
 base_router = APIRouter(
     prefix="/api/v1",
     tags=["base"]

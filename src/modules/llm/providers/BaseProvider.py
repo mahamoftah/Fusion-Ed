@@ -1,5 +1,5 @@
 import logging
-from src.modules.BaseModule import BaseModule
+from modules.BaseModule import BaseModule
 
 
 # Google, OpenAI, Groq, DeepSeek, Qwen
@@ -30,9 +30,10 @@ class BaseProvider(BaseModule):
             if structured_response:
                 client = self.client.with_structured_output(response_model)
                 response = await client.ainvoke(messages)
-            else:
-                response = await self.client.ainvoke(messages)
-            return response.content if response else None
+                return response
+                
+            response = await self.client.ainvoke(messages)
+            return response.content
         except Exception as e:
             self.logger.error(f"Error generating response: {e}")
             return None

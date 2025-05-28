@@ -1,5 +1,5 @@
 from typing import List
-from src.modules.BaseModule import BaseModule
+from modules.BaseModule import BaseModule
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 class Embedding(BaseModule):
