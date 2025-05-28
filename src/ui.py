@@ -5,34 +5,30 @@ from typing import List, Dict
 import os
 import uuid
 from pathlib import Path
+import uvicorn
+import threading
+import time
+from fastapi import FastAPI
+from src.routes.base import base_router
+from src.routes.file import file_router
+from src.routes.chat import chat_router
+from contextlib import asynccontextmanager
+from motor.motor_asyncio import AsyncIOMotorClient
+from qdrant_client import AsyncQdrantClient
+from src.helpers.config import get_settings
+from src.models.ChatHistoryModel import ChatHistoryModel
+from src.models.VectorStoreModel import VectorStoreModel
+from src.modules.llm.LLMProviderFactory import LLMProviderFactory
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Constants
-API_BASE_URL = "http://localhost:8010/api/v1"  # Update this if your FastAPI server runs on a different port
+API_BASE_URL = "http://localhost:8010/api/v1"
 DATA_DIR = Path("data")
 
-# LLM Provider configurations
-LLM_PROVIDERS = {
-    "OpenAI": {
-        "model_id": "gpt-3.5-turbo",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    },
-    "Google": {
-        "model_id": "gemini-pro",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    },
-    "Groq": {
-        "model_id": "mixtral-8x7b-32768",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    },
-    "DeepSeek": {
-        "model_id": "deepseek-chat",
-        "max_tokens": 1000,
-        "temperature": 0.7
-    }
-}
 
 def ensure_data_dir():
     """Ensure the data directory exists."""
@@ -50,44 +46,45 @@ def initialize_session_state():
     if "uploaded_files" not in st.session_state:
         st.session_state.uploaded_files = []
     if "user_id" not in st.session_state:
-        # Generate a unique user ID for this session
         st.session_state.user_id = str(uuid.uuid4())
     if "current_llm" not in st.session_state:
         st.session_state.current_llm = "OpenAI"
+    if "server_started" not in st.session_state:
+        st.session_state.server_started = False
 
-# def upload_file(file):
-#     """Upload a file to the backend."""
-#     try:
-#         ensure_data_dir()
-        
-#         # Save file to data directory
-#         file_path = DATA_DIR / file.name
-#         with open(file_path, "wb") as f:
-#             f.write(file.getvalue())
-        
-#         # Create the file request payload according to the schema
-#         file_request = {
-#             "files": [{
-#                 "file_id": str(uuid.uuid4()),
-#                 "file_url": str(file_path),  # Send the file path
-#                 "file_name": file.name,
-#                 "course_id": "default"
-#             }]
-#         }
-        
-#         # Send the request with file metadata
-#         response = requests.post(
-#             f"{API_BASE_URL}/files/upload",
-#             json=file_request
-#         )
-        
-#         if response.status_code == 200:
-#             st.success(f"Successfully uploaded {file.name}")
-#             st.session_state.uploaded_files.append(file.name)
-#         else:
-#             st.error(f"Error uploading {file.name}: {response.text}")
-#     except Exception as e:
-#         st.error(f"Error uploading file: {str(e)}")
+def start_fastapi_server():
+    """Start the FastAPI server in a separate thread."""
+    app = FastAPI()
+    
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        logger.warning("Starting Fusion-Ed")
+        settings = get_settings()
+
+        app.mongo_conn = AsyncIOMotorClient(settings.MONGODB_URL)
+        app.mongo_client = app.mongo_conn[settings.MONGODB_DATABASE]
+        app.qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+        app.vector_store = await VectorStoreModel.create_instance(app.qdrant_client)
+        app.chat_history_model = await ChatHistoryModel.create_instance(app.mongo_client)
+
+        llm_factory = LLMProviderFactory()
+        app.llm = await llm_factory.create(provider=settings.LLM_PROVIDER)
+
+        try:    
+            yield
+        finally:
+            logger.info("Shutting down Fusion-Ed")
+            await app.mongo_conn.close()
+            await app.qdrant_client.close()
+
+    app = FastAPI(lifespan=lifespan)
+    app.include_router(base_router)
+    app.include_router(file_router)
+    app.include_router(chat_router)
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=8010, log_level="info")
+    server = uvicorn.Server(config)
+    server.run()
 
 def update_llm_config():
     """Update LLM configuration in the backend."""
@@ -144,23 +141,17 @@ def main():
     
     initialize_session_state()
     
+    # Start FastAPI server if not already started
+    if not st.session_state.server_started:
+        server_thread = threading.Thread(target=start_fastapi_server, daemon=True)
+        server_thread.start()
+        st.session_state.server_started = True
+        time.sleep(2)  # Give the server time to start
+    
     # Sidebar for LLM configuration
     st.sidebar.header("LLM Configuration")
-    
-    # LLM Provider selection
-    selected_provider = st.sidebar.selectbox(
-        "Select LLM Provider",
-        options=list(LLM_PROVIDERS.keys()),
-        key="current_llm",
-        on_change=update_llm_config
-    )
-    
-    # Display current LLM configuration
-    st.sidebar.subheader("Current Configuration")
-    config = LLM_PROVIDERS[selected_provider]
-    st.sidebar.write(f"Model: {config['model_id']}")
-    st.sidebar.write(f"Max Tokens: {config['max_tokens']}")
-    st.sidebar.write(f"Temperature: {config['temperature']}")
+    st.sidebar.write("Coming Soon!")
+
     
     # Display chat history
     for message in st.session_state.chat_history:
@@ -183,4 +174,4 @@ def main():
             st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
-    main() 
+    main()

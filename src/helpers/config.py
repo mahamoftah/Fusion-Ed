@@ -1,5 +1,8 @@
 from pydantic_settings import BaseSettings
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Settings(BaseSettings):
     APP_NAME: str
@@ -26,8 +29,8 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float
     LLM_API_URL: str
 
-    class Config:
-        env_file = ".env"
+    # class Config:
+    #     env_file = ".env"
 
 
 def get_settings():

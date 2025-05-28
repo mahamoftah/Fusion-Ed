@@ -37,8 +37,8 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         logger.info("Shutting down Fusion-Ed")
-        app.mongo_conn.close()
-        app.qdrant_client.close()
+        await app.mongo_conn.close()
+        await app.qdrant_client.close()
 
 
 
@@ -46,3 +46,8 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(base_router)
 app.include_router(file_router)
 app.include_router(chat_router)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8010)
