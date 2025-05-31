@@ -92,7 +92,7 @@ class VectorStoreModel(BaseDataModel):
 
     async def search_similar_chunks(self, 
                                   query_vector: List[float], 
-                                  limit: int = 5,
+                                  limit: int = 10,
                                   score_threshold: float = 0.7) -> List[VectorStoreSchema]:
         try:
             # Search for similar vector0s
@@ -102,7 +102,7 @@ class VectorStoreModel(BaseDataModel):
                 limit=limit,
                 score_threshold=score_threshold
             )
-            
+            # self.logger.info(f"Search result: {search_result}")
             return [
                 {
                     "text": point.payload["text"],

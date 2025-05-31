@@ -6,22 +6,33 @@ import uuid
 from datetime import datetime
 import os
 
+
+
 class ChatController(BaseController):
-    def __init__(self, llm, chat_history_model, vector_store):
+    def __init__(self, llm, chat_history_model, vector_store, query_translator):
         super().__init__()
         self.llm = llm
         self.chat_history_model = chat_history_model
         self.vector_store = vector_store
         self.embedding_model = Embedding()
         self.chat_id = str(uuid.uuid4())
+        self.query_translator = query_translator
 
     async def generate_response(self, question: str, user_id: str, chat_id: str):
         try:
             self.user_id = user_id
             self.chat_id = chat_id
             
-            similar_chunks = await self.get_similar_chunks(question)
+            # Get chat history first
             chat_history = await self.get_chat_history(user_id)
+            
+            # Translate the query using chat history context
+            translated_question = await self.query_translator.translate_query(question, chat_history)
+            self.logger.info(f"Original question: {question}")
+            self.logger.info(f"Translated question: {translated_question}")
+            
+            # Use translated question for similarity search
+            similar_chunks = await self.get_similar_chunks(translated_question)
             courses = await self.get_courses()
             llm_entry = await self.construct_prompt(question, similar_chunks, chat_history, courses)
 
@@ -35,7 +46,7 @@ class ChatController(BaseController):
     async def get_chat_history(self, user_id: str):
         try:
             chat_history = await self.chat_history_model.get_chat_history(user_id)
-            self.logger.info(f"Chat history: {chat_history}")
+            # self.logger.info(f"Chat history: {chat_history}")
             return chat_history
         except Exception as e:
             self.logger.error(f"Error getting chat history: {e}")
@@ -62,7 +73,7 @@ class ChatController(BaseController):
         try:
             question_vector = await self.embedding_model.embed_query(question)
             similar_chunks = await self.vector_store.search_similar_chunks(question_vector)
-            self.logger.info(f"Similar chunks: {similar_chunks}")
+            # self.logger.info(f"Similar chunks: {similar_chunks}")
             return similar_chunks
         except Exception as e:
             self.logger.error(f"Error getting similar chunks: {e}")
@@ -79,10 +90,10 @@ class ChatController(BaseController):
         except Exception as e:
             self.logger.error(f"Error getting courses name: {e}")
             return [
-                "Water Matters Understanding Conservation.docx",
-                "The Use of AI in Sustainability_draft_ST (2).docx",
-                "Introduction To Sustainability Concepts.docx",
-                "Introduction to Climate Change.docx",
+                "Water Matters Understanding Conservation: ",
+                "The Use of AI in Sustainability: ",
+                "Introduction To Sustainability Concepts: ",
+                "Introduction to Climate Change: ",
                 "Introduction to Biodiversity Conservation.docx",
                 "GHG Accounting Course Full Course.docx",
                 "Exploring Carbon Credits.docx",
@@ -94,6 +105,7 @@ class ChatController(BaseController):
 ### You are an AI-Powered Educational Assistant for Fusion Ed by FusionMinds.ai
 
 Your purpose is to help users explore and understand the educational content and offerings available on the Fusion Ed platform. You act as a friendly and knowledgeable guide to:
+- Focus solely on the specific question without referencing documents or context
 - Answer questions about available courses and talks
 - Recommend suitable learning paths based only on Fusion Ed's provided content
 - Maintain clarity, brevity, and professionalism in every response
@@ -103,14 +115,33 @@ Your purpose is to help users explore and understand the educational content and
 
 ### Guidelines for Responses
 
-#### 📝 General Instructions
-1. Begin responses naturally and conversationally. Avoid phrases like "According to the documents" or "As mentioned earlier."
+#### General Instructions
+1. **Begin responses naturally and conversationally. Avoid phrases like "According to the documents", "Based on the documents", or "As mentioned earlier."**
 2. Focus strictly on Fusion Ed offerings when answering or recommending courses.
 3. Use warm, supportive language while remaining informative and respectful.
 4. If the user's intent or context is unclear, politely ask clarifying questions.
 5. Only recommend courses that appear in the available course list (`##Fusion Ed Available Courses`).
 6. Match recommendations to the user's interest or level, but **never hallucinate new content**.
 
+#### Course Recommendation Guidelines
+1. When recommending courses:
+   - Check the chat history for previously recommended courses
+   - Avoid repeating the same course recommendations unless specifically requested
+   - If a course was already recommended, acknowledge it and suggest complementary courses
+   - Consider the user's learning progression and suggest next steps
+   - Group related courses together for a cohesive learning path
+
+2. For follow-up recommendations:
+   - Reference previously recommended courses when relevant
+   - Build upon previous recommendations to create a learning journey
+   - Suggest courses that complement previously recommended ones
+   - Consider the user's demonstrated interests from the conversation
+
+3. When discussing courses:
+   - Highlight how new recommendations relate to previously mentioned courses
+   - Explain the logical progression between courses
+   - Emphasize the value of the complete learning path
+   - Maintain context of the user's learning goals
 """  
 
 
@@ -118,6 +149,7 @@ Your purpose is to help users explore and understand the educational content and
 
         instructions = await self.get_instructions()
         similar_chunks = await self.format_similar_chunks(chunks)
+        self.logger.info(f"Similar chunks: {similar_chunks}")
         chat_history = await self.format_chat_history(history) if history else ""
         fusion_courses = await self.format_courses(courses)
         links = await self.format_links()
@@ -135,6 +167,12 @@ Your purpose is to help users explore and understand the educational content and
                 })
 
         if user_prompt:
+
+            llm_entry.append({
+                "role": "user",
+                "content": "answer based ONLY on documents provided"
+            })
+            
             llm_entry.append({
                 "role": "user",
                 "content": user_prompt

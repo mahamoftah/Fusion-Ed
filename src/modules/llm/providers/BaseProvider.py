@@ -1,5 +1,5 @@
 import logging
-from modules.BaseModule import BaseModule
+from src.modules.BaseModule import BaseModule
 
 
 # Google, OpenAI, Groq, DeepSeek, Qwen

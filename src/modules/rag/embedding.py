@@ -1,10 +1,15 @@
 from typing import List
-from modules.BaseModule import BaseModule
+from src.modules.BaseModule import BaseModule
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 class Embedding(BaseModule):
     def __init__(self):
         super().__init__()
+        # self.embedding_model = OpenAIEmbeddings(
+        #     model=self.settings.EMBEDDING_MODEL,
+        #     api_key=self.settings.EMBEDDING_API_KEY,
+        # )
         self.embedding_model = GoogleGenerativeAIEmbeddings(
             model=self.settings.EMBEDDING_MODEL,
             google_api_key=self.settings.EMBEDDING_API_KEY,

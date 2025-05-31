@@ -36,6 +36,40 @@ def initialize_session_state():
     if "chat_id" not in st.session_state:
         st.session_state.chat_id = ""
 
+def upload_file(file):
+    """Upload a file to the backend."""
+    try:
+        ensure_data_dir()
+        
+        # Save file to data directory
+        file_path = DATA_DIR / file.name
+        with open(file_path, "wb") as f:
+            f.write(file.getvalue())
+        
+        # Create the file request payload according to the schema
+        file_request = {
+            "files": [{
+                "file_id": str(uuid.uuid4()),
+                "file_url": str(file_path),  # Send the file path
+                "file_name": file.name,
+                "course_id": "default"
+            }]
+        }
+        
+        # Send the request with file metadata
+        response = requests.post(
+            f"{API_BASE_URL}/files/upload",
+            json=file_request
+        )
+        
+        if response.status_code == 200:
+            st.success(f"Successfully uploaded {file.name}")
+            st.session_state.uploaded_files.append(file.name)
+        else:
+            st.error(f"Error uploading {file.name}: {response.text}")
+    except Exception as e:
+        st.error(f"Error uploading file: {str(e)}")
+
 def send_message(message: str) -> str:
     """Send a message to the chat endpoint and get the response."""
     try:
@@ -61,12 +95,21 @@ def send_message(message: str) -> str:
 def main():
     st.set_page_config(page_title="Fusion-Ed Chat Interface", layout="wide")
     st.title("Chat with Fusion-Ed")
-    
     initialize_session_state()
-    
-    # Sidebar for LLM configuration
+
     st.sidebar.header("LLM Configuration")
-    st.sidebar.write(f"Coming Soon...")
+    
+    # Sidebar for file upload
+    # with st.sidebar:
+    #     st.header("Document Upload")
+    #     uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt", "docx"])
+    #     if uploaded_file:
+    #         upload_file(uploaded_file)
+        
+    #     st.header("Uploaded Files")
+    #     for file in st.session_state.uploaded_files:
+    #         st.write(f"📄 {file}")
+    
     
     # Display chat history
     for message in st.session_state.chat_history:
@@ -84,9 +127,12 @@ def main():
         
         # Get and display assistant response
         with st.chat_message("assistant"):
-            response = send_message(prompt)
-            st.write(response)
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            with st.spinner("Thinking..."):
+                response = send_message(prompt)
+                st.write(response)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
     main()
+
+    

@@ -1,7 +1,7 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from typing import List, Optional
 from langchain.schema import Document
-from modules.BaseModule import BaseModule
+from src.modules.BaseModule import BaseModule
 
 class RecursiveSplitter(BaseModule):
     def __init__(self):

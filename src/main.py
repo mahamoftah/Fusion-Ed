@@ -12,11 +12,9 @@ from src.helpers.config import get_settings
 import logging
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 
 
@@ -33,7 +31,18 @@ async def lifespan(app: FastAPI):
     app.chat_history_model = await ChatHistoryModel.create_instance(app.mongo_client)
 
     llm_factory = LLMProviderFactory()
-    app.llm = await llm_factory.create(provider=settings.LLM_PROVIDER)
+    # app.llm = await llm_factory.create(
+    #     provider=settings.LLM_PROVIDER,
+    #     api_key=settings.OPENROUTER_API_KEY,
+    #     model_id="qwen/qwen3-8b",
+    #     base_url="https://openrouter.ai/api/v1"
+    # )
+
+    app.llm = await LLMProviderFactory().create(
+        provider="GROQ",
+        api_key=settings.GROQ_API_KEY,
+        model_id="gemma2-9b-it"
+    )
 
     try:    
         yield

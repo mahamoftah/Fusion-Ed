@@ -2,25 +2,27 @@ import os
 import sys
 import asyncio
 import streamlit as st
-from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 from qdrant_client import AsyncQdrantClient
 import logging
 import uuid
 import nest_asyncio
-from functools import partial
+import certifi
+import backoff
 
 # Add the project root directory to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)  # Insert at beginning to ensure it's found first
+sys.path.insert(0, parent_dir)
+
 
 from src.models.ChatHistoryModel import ChatHistoryModel
 from src.models.VectorStoreModel import VectorStoreModel
 from src.modules.llm.LLMProviderFactory import LLMProviderFactory
 from src.helpers.config import get_settings
 from src.routes.chat import answer
-import certifi
+from src.helpers.config import get_settings
+settings = get_settings()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -46,26 +48,58 @@ def get_or_create_eventloop():
             return loop
         raise ex
 
+@backoff.on_exception(backoff.expo, Exception, max_tries=3)
+async def connect_to_mongodb():
+    """Connect to MongoDB with retry logic."""
+    try:
+        client = AsyncIOMotorClient(settings.MONGODB_URL, tlsCAFile=certifi.where())
+        # Test the connection
+        await client.admin.command('ping')
+        return client
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        raise
+
+@backoff.on_exception(backoff.expo, Exception, max_tries=3)
+async def connect_to_qdrant():
+    """Connect to Qdrant with retry logic."""
+    try:
+        client = AsyncQdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+        # Test the connection
+        await client.get_collections()
+        return client
+    except Exception as e:
+        logger.error(f"Failed to connect to Qdrant: {e}")
+        raise
+
 async def initialize_app():
     global llm, chat_history_model, vector_store, mongo_conn, qdrant_client
     
-    logger.warning("Starting Fusion-Ed")
+    logger.info("Starting Fusion-Ed initialization")
     settings = get_settings()
 
     try:
-        mongo_conn = AsyncIOMotorClient(settings.MONGODB_URL, tlsCAFile=certifi.where())
+        # Connect to MongoDB with retry
+        mongo_conn = await connect_to_mongodb()
         mongo_client = mongo_conn[settings.MONGODB_DATABASE]
-        qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+        
+        # Connect to Qdrant with retry
+        qdrant_client = await connect_to_qdrant()
+        
+        # Initialize models
         vector_store = await VectorStoreModel.create_instance(qdrant_client)
         chat_history_model = await ChatHistoryModel.create_instance(mongo_client)
 
+        # Initialize LLM
         llm_factory = LLMProviderFactory()
         llm = await llm_factory.create(provider=settings.LLM_PROVIDER)
         
         logger.info("Fusion-Ed initialized successfully")
     except Exception as e:
         logger.error(f"Error initializing Fusion-Ed: {e}")
-        raise e
+        # Clean up any partial initialization
+        await cleanup()
+        raise
 
 async def cleanup():
     global mongo_conn, qdrant_client
@@ -101,7 +135,7 @@ def run_async(coro):
     loop = get_or_create_eventloop()
     return loop.run_until_complete(coro)
 
-def main():
+async def main():
     st.set_page_config(page_title="Fusion-Ed Chat Interface", layout="wide")
     st.title("Chat with Fusion-Ed")
     
@@ -109,8 +143,53 @@ def main():
     
     # Sidebar for LLM configuration
     st.sidebar.header("LLM Configuration")
-    st.sidebar.write(f"Coming Soon!")
     
+    # Model selection dropdown
+    model_options = ["Gemini", "Qwen 8B", "LLAMA 8B", "LLAMA 70B", "Gemma 9B", "Azure GPT-4o-mini"]
+    selected_model = st.sidebar.selectbox("Select Model", model_options, index=0)
+
+    global llm
+    # Model configuration
+    if selected_model == "Gemini":
+        llm = await LLMProviderFactory().create(
+            provider="GOOGLE",
+            api_key=settings.LLM_API_KEY,
+            model_id="gemini-1.5-flash"
+        )
+
+    elif selected_model == "Qwen 8B":
+        llm = await LLMProviderFactory().create(
+            provider="OPENROUTER",
+            api_key=settings.OPENROUTER_API_KEY,
+            model_id="qwen/qwen3-8b",
+            base_url="https://openrouter.ai/api/v1"
+        )
+    elif selected_model == "LLAMA 8B":
+        llm = await LLMProviderFactory().create(
+            provider="GROQ",
+            api_key=settings.GROQ_API_KEY,
+            model_id="llama3-8b-8192"
+        )
+    elif selected_model == "LLAMA 70B":
+        llm = await LLMProviderFactory().create(
+            provider="GROQ",
+            api_key=settings.GROQ_API_KEY,
+            model_id="llama3-70b-8192"
+        )
+    elif selected_model == "Gemma 9B":
+        llm = await LLMProviderFactory().create(
+            provider="GROQ",
+            api_key=settings.GROQ_API_KEY,
+            model_id="gemma2-9b-it"
+        )
+    elif selected_model == "Azure GPT-4o-mini":
+        llm = await LLMProviderFactory().create(
+            provider="AZUREOPENAI",
+            api_key=settings.AZURE_OPENAI_API_KEY,
+            model_id="gpt-4o-mini"
+        )
+    
+
     # Display chat history
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
@@ -127,9 +206,10 @@ def main():
         
         # Get and display assistant response
         with st.chat_message("assistant"):
-            response = run_async(send_message(prompt))
-            st.write(response)
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            with st.spinner("Thinking..."):
+                response = run_async(send_message(prompt))
+                st.write(response)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
     try:
@@ -137,7 +217,7 @@ if __name__ == "__main__":
         run_async(initialize_app())
         
         # Run the main Streamlit app
-        main()
-    finally:
-        # Cleanup
+        run_async(main())
+    except:
+        # Cleanup will only happen when the application is actually shutting down
         run_async(cleanup())

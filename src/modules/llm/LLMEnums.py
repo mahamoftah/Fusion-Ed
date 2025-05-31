@@ -1,10 +1,12 @@
 from enum import Enum
 
 class LLMEnums(Enum):
-    OPENAI = "OPENAI"
+    AZUREOPENAI = "AZUREOPENAI"
     GOOGLE = "GOOGLE"
     GROQ = "GROQ"
+    OPENROUTER = "OPENROUTER"
     DEEPSEEK = "DEEPSEEK"
+    OPENAI = "OPENAI"
 
 class OpenAIEnums(Enum):
     SYSTEM = "system"

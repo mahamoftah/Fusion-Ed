@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int
     LLM_TEMPERATURE: float
     LLM_API_URL: str
+    GROQ_API_KEY: str
+    OPENROUTER_API_KEY: str
+    AZURE_ENDPOINT: str
+    AZURE_OPENAI_API_KEY: str
+    AZURE_OPENAI_API_VERSION: str
 
     # class Config:
     #     env_file = ".env"
