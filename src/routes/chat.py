@@ -28,16 +28,16 @@ async def upload_file(request: Request,
     )
 
 
-# async def answer(question: str, user_id: str, chat_id: str, llm, chat_history_model, vector_store):
+async def answer(question: str, user_id: str, chat_id: str, llm, chat_history_model, vector_store):
     
-#     query_translator = QueryTranslationController(llm=llm)
-#     chat_controller = ChatController(llm=llm, chat_history_model=chat_history_model, vector_store=vector_store, query_translator=query_translator)
-#     response = await chat_controller.generate_response(question, user_id, chat_id)
-#     logger.info(f"Response: {response}")
+    query_translator = QueryTranslationController(llm=llm)
+    chat_controller = ChatController(llm=llm, chat_history_model=chat_history_model, vector_store=vector_store, query_translator=query_translator)
+    response = await chat_controller.generate_response(question, user_id, chat_id)
+    logger.info(f"Response: {response}")
 
-#     return ChatResponse(
-#         answer=response
-#     )
+    return ChatResponse(
+        answer=response
+    )
 
 
 @chat_router.get("/history",response_model=ChatHistoryResponse)
